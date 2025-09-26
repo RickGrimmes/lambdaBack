@@ -1,4 +1,4 @@
-<?php
+<?php 
 
 namespace App\Models;
 
@@ -12,15 +12,20 @@ class User extends Authenticatable
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable;
 
+    protected $table = 'Users';
+    protected $primaryKey = 'USR_ID';
+
     /**
      * The attributes that are mass assignable.
      *
      * @var list<string>
      */
     protected $fillable = [
-        'name',
-        'email',
-        'password',
+        'USR_Name',
+        'USR_LastName', 
+        'USR_Email',
+        'USR_Password',
+        'USR_UserRole',
     ];
 
     /**
@@ -29,8 +34,7 @@ class User extends Authenticatable
      * @var list<string>
      */
     protected $hidden = [
-        'password',
-        'remember_token',
+        'USR_Password',
     ];
 
     /**
@@ -41,8 +45,22 @@ class User extends Authenticatable
     protected function casts(): array
     {
         return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
+            'USR_Password' => 'hashed',
         ];
+    }
+
+    public function rooms()
+    {
+        return $this->hasMany(Room::class, 'ROO_USR_ID', 'USR_ID');
+    }
+
+    public function routines()
+    {
+        return $this->hasMany(Routine::class, 'ROU_USR_ID', 'USR_ID');
+    }
+
+    public function userrooms()
+    {
+        return $this->hasMany(UsersRoom::class, 'URO_USR_ID', 'USR_ID');
     }
 }

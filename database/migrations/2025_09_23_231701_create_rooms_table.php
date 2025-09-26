@@ -11,13 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('Users', function (Blueprint $table) {
-            $table->id('USR_ID');
-            $table->string('USR_Name');
-            $table->string('USR_LastName');
-            $table->string('USR_Email')->unique();
-            $table->string('USR_Password');
-            $table->enum('USR_UserRole', ['trainer', 'trainee']);
+        Schema::create('Rooms', function (Blueprint $table) {
+            $table->id('ROO_ID');
+            $table->string('ROO_Code', 7)->unique();
+            $table->string('ROO_Name');
+            $table->foreignId('ROO_USR_ID')->constrained('Users', 'USR_ID')->onDelete('cascade');
             $table->timestamps();
         });
     }
@@ -27,6 +25,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('Users');
+        Schema::dropIfExists('Rooms');
     }
 };
