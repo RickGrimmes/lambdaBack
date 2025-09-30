@@ -12,8 +12,14 @@ use App\Http\Controllers\MediaController;
 Route::post('login', [UserController::class, 'login']);
 Route::post('register', [UserController::class, 'register']);
 
-// ROOM
-// USERS_ROOM
-// EXCERCISE
-// ROUTINE
-// EXCERCISE_MEDIA
+Route::middleware('auth:api')->group(function () {
+    // ROOM
+    Route::get('getRooms', [RoomController::class, 'getRooms']);
+    Route::post('createRoom', [RoomController::class, 'createRoom']);
+    Route::get('getRoom', [RoomController::class, 'getRoom']);
+
+    // USERS_ROOM
+    // EXCERCISE
+    // ROUTINE
+    // EXCERCISE_MEDIA
+});

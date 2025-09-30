@@ -6,13 +6,14 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Tymon\JWTAuth\Contracts\JWTSubject;
 
-class User extends Authenticatable
+class User extends Authenticatable implements JWTSubject
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable;
 
-    protected $table = 'Users';
+    protected $table = 'Users'; 
     protected $primaryKey = 'USR_ID';
 
     /**
@@ -24,6 +25,8 @@ class User extends Authenticatable
         'USR_Name',
         'USR_LastName', 
         'USR_Email',
+        'USR_Phone',
+        'USR_FCM',
         'USR_Password',
         'USR_UserRole',
     ];
@@ -47,6 +50,16 @@ class User extends Authenticatable
         return [
             'USR_Password' => 'hashed',
         ];
+    }
+
+    public function getJWTIdentifier()
+    {
+        return $this->getKey();
+    }
+
+    public function getJWTCustomClaims(): array
+    {
+        return [];
     }
 
     public function rooms()

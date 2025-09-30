@@ -17,6 +17,7 @@ class Excercise extends Model
         'EXC_Title',
         'EXC_Type',
         'EXC_Instructions',
+        'EXC_DifficultyLevel',
         'EXC_ROO_ID',
     ];
 
