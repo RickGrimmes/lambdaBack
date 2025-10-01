@@ -14,7 +14,7 @@ class RoomController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function getRooms(Request $request)
+    public function getMyRooms(Request $request)
     {
         try {
             $user = JWTAuth::parseToken()->authenticate();
