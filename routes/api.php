@@ -21,22 +21,23 @@ Route::middleware('auth:api')->group(function () {
     // USER
     Route::post('logout', [UserController::class, 'logout']);
     Route::post('editUser', [UserController::class, 'editUser']);
-    Route::post('refresh-token', [UserController::class, 'refreshToken']);
+    Route::post('refreshToken', [UserController::class, 'refreshToken']);
     Route::get('getUser', [UserController::class, 'getUser']);
 
-    // ROOM (SON LOS QUE YO COMO TRAINER CREO)
+    // ROOM (SON LOS QUE YO CREO COMO TRAINER)
     Route::get('getMyRooms', [RoomController::class, 'getMyRooms']); // Solo para el trainer
     Route::post('createRoom', [RoomController::class, 'createRoom']);
-    Route::get('getRoom', [RoomController::class, 'getRoom']);
+    Route::get('getRoom/{room}', [RoomController::class, 'getRoom']); // Obtener 1 solo room (igual y también sus excercises idk)
+    Route::put('editRoom/{room}', [RoomController::class, 'editRoom']);
+
+    // EXCERCISE
+    Route::post('createExcercise', [ExcerciseController::class, 'createExcercise']);
+    Route::get('getExcercisesByRoom/{room}', [ExcerciseController::class, 'getExcercisesByRoom']);
+    Route::get('getExcercise', [ExcerciseController::class, 'getExcercise']);
+    Route::get('getExcercise/{id}', [ExcerciseController::class, 'show']);
 
     // USERS_ROOM
 
-    // EXCERCISE
-    Route::get('getExcercise', [ExcerciseController::class, 'getExcercise']);
-    Route::post('createExcercise', [ExcerciseController::class, 'createExcercise']);
-    Route::get('getExcercisesByRoom/{roomId}', [ExcerciseController::class, 'getExcercisesByRoom']);
-
     // ROUTINE
-    
-    // EXCERCISE_MEDIA
+
 });

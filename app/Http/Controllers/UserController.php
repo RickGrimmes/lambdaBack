@@ -18,6 +18,7 @@ class UserController extends Controller
             'USR_Name' => 'required|string|min:2|max:50',
             'USR_LastName' => 'required|string|min:2|max:50',
             'USR_Email' => 'required|email|unique:Users,USR_Email|max:255',
+            'USR_Phone' => 'required|unique:Users,USR_Phone|max:10',
             'USR_Password' => 'required|string|min:8|max:255',
             'USR_UserRole' => 'required|in:trainer,trainee'
         ]);
@@ -42,6 +43,7 @@ class UserController extends Controller
                 'USR_Name' => $request->USR_Name,
                 'USR_LastName' => $request->USR_LastName,
                 'USR_Email' => $request->USR_Email,
+                'USR_Phone' => $request->USR_Phone,
                 'USR_Password' => Hash::make($request->USR_Password),
                 'USR_UserRole' => $request->USR_UserRole
             ]);

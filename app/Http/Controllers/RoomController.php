@@ -135,12 +135,45 @@ class RoomController extends Controller
         }
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(Room $room)
+    public function editRoom(Room $room)
     {
-        //
+        try {
+            $user = JWTAuth::parseToken()->authenticate();
+            
+            if ($room->ROO_USR_ID !== $user->USR_ID) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No tienes permiso para editar'
+                ], 403);
+            }
+
+            $validator = Validator::make(request()->all(), [
+                'ROO_Name' => 'required|string|min:2|max:100',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error de validación',
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+
+            $room->ROO_Name = request()->ROO_Name;
+            $room->save();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Room editado exitosamente'
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al editar room',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
