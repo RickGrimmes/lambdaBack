@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Excercise;
 use App\Models\Room;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -130,6 +131,37 @@ class RoomController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Error al obtener room',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function getRoomData(Room $room)
+    {
+         try {
+            $user = JWTAuth::parseToken()->authenticate();
+            
+            if ($room->ROO_USR_ID !== $user->USR_ID) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No tienes permiso para ver este room'
+                ], 403);
+            }
+
+            $room->load('userrooms.user');
+            $excercises = Excercise::where('EXE_ROO_ID', $room->ROO_ID)->get();
+
+            return response()->json([
+                'success' => true,
+                'room' => [$room],
+                'exercises' => $excercises,
+                'total_exercises' => $excercises->count()
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener room data',
                 'error' => $e->getMessage()
             ], 500);
         }

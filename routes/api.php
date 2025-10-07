@@ -20,21 +20,26 @@ Route::middleware('auth:api')->group(function () {
 
     // USER
     Route::post('logout', [UserController::class, 'logout']);
-    Route::post('editUser', [UserController::class, 'editUser']);
+    Route::put('editUser', [UserController::class, 'editUser']);
     Route::post('refreshToken', [UserController::class, 'refreshToken']);
     Route::get('getUser', [UserController::class, 'getUser']);
 
     // ROOM (SON LOS QUE YO CREO COMO TRAINER)
     Route::get('getMyRooms', [RoomController::class, 'getMyRooms']); // Solo para el trainer
     Route::post('createRoom', [RoomController::class, 'createRoom']);
-    Route::get('getRoom/{room}', [RoomController::class, 'getRoom']); // Obtener 1 solo room (igual y también sus excercises idk)
+    Route::get('getRoom/{room}', [RoomController::class, 'getRoom']); // Obtener 1 solo room
+    Route::get('getRoomData/{room}', [RoomController::class, 'getRoomData']); // Obtener media de un room
     Route::put('editRoom/{room}', [RoomController::class, 'editRoom']);
 
     // EXCERCISE
     Route::post('createExcercise', [ExcerciseController::class, 'createExcercise']);
     Route::get('getExcercisesByRoom/{room}', [ExcerciseController::class, 'getExcercisesByRoom']);
-    Route::get('getExcercise', [ExcerciseController::class, 'getExcercise']);
-    Route::get('getExcercise/{id}', [ExcerciseController::class, 'show']);
+    Route::get('getExcercise/{excercise}', [ExcerciseController::class, 'getExcercise']); // ejercicio con media también
+
+    // EXCERCISE MEDIA
+    Route::post('uploadMedia', [MediaController::class, 'uploadMedia']);
+    Route::get('getMediaByExcercise/{excercise}', [MediaController::class, 'getMediaByExcercise']);
+    Route::put('updateMedia/{media}', [MediaController::class, 'updateMedia']); // para editar imágenes o url de video, permite también que si dejas nulo eso cuenta como borrar
 
     // USERS_ROOM
 

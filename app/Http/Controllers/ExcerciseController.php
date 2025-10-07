@@ -118,25 +118,62 @@ class ExcerciseController extends Controller
     }
 
     
-    public function getExcercise()
+    public function getExcercise($excercise)
     {
-        
-    }
+        try {
+            $user = JWTAuth::parseToken()->authenticate();
 
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        //
-    }
+            if (!$user) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Usuario no encontrado'
+                ], 404);
+            }
 
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
-    {
-        //
+            $excercise = Excercise::with('room', 'media')->find($excercise);
+            
+            if (!$excercise) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Ejercicio no encontrado'
+                ], 404);
+            }
+
+            if ($excercise->room->ROO_USR_ID !== $user->USR_ID) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No tienes permiso para ver este ejercicio'
+                ], 403);
+            }
+
+            $totalImages = 0;
+            $totalUrls = 0;
+            
+            foreach ($excercise->media as $media) {
+                if ($media->MED_Media1) $totalImages++;
+                if ($media->MED_Media2) $totalImages++;
+                if ($media->MED_Media3) $totalImages++;
+                if ($media->MED_Media4) $totalImages++;
+                if ($media->MED_URL1) $totalUrls++;
+                if ($media->MED_URL2) $totalUrls++;
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Ejercicio obtenido exitosamente',
+                'data' => $excercise,
+                'media' => $excercise->media,
+                'total_images' => $totalImages,
+                'total_urls' => $totalUrls
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener ejercicio',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
