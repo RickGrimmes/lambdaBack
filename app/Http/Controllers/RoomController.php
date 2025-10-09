@@ -208,19 +208,53 @@ class RoomController extends Controller
         }
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, Room $room)
+    public function searchRoom(Request $request)
     {
-        //
-    }
+        try {
+            $user = JWTAuth::parseToken()->authenticate();
 
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(Room $room)
-    {
-        //
+            if (!$user) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Usuario no encontrado'
+                ], 404);
+            }
+
+            $validator = Validator::make($request->all(), [
+                'ROO_Code' => 'required|string|size:7',
+            ], [
+                'ROO_Code.required' => 'El código del room es obligatorio',
+                'ROO_Code.size' => 'El código del room debe tener exactamente 7 caracteres',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error de validación',
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+
+            $room = Room::where('ROO_Code', $request->ROO_Code)->first();
+
+            if (!$room) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Room no encontrado con ese código'
+                ], 404);
+            }
+
+            return response()->json([
+                'success' => true,
+                'room' => $room
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al buscar room',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 }
