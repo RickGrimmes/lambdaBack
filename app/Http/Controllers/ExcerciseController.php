@@ -14,11 +14,11 @@ class ExcerciseController extends Controller
     public function createExcercise(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'EXE_Title' => 'required|string|max:255',
-            'EXE_Type' => 'nullable|in:Calentamiento,Calistenia,Musculatura,Elasticidad,Resistencia,Médico',
-            'EXE_Instructions' => 'nullable|string',
-            'EXE_DifficultyLevel' => 'nullable|in:PRINCIPIANTE,INTERMEDIO,AVANZADO',
-            'EXE_ROO_ID' => 'required|integer|exists:rooms,id'
+            'EXC_Title' => 'required|string|max:255',
+            'EXC_Type' => 'nullable|in:Calentamiento,Calistenia,Musculatura,Elasticidad,Resistencia,Médico',
+            'EXC_Instructions' => 'nullable|string',
+            'EXC_DifficultyLevel' => 'nullable|in:PRINCIPIANTE,INTERMEDIO,AVANZADO',
+            'EXC_ROO_ID' => 'required|integer|exists:rooms,id'
         ]);
 
         if ($validator->fails()) {
@@ -39,7 +39,7 @@ class ExcerciseController extends Controller
                 ], 404);
             }
 
-            $room = Room::find($request->input('EXE_ROO_ID'));
+            $room = Room::find($request->input('EXC_ROO_ID'));
             
             if (!$room) {
                 return response()->json([
@@ -56,11 +56,11 @@ class ExcerciseController extends Controller
             }
 
             $excercise = Excercise::create([
-                'EXE_Title' => $request->EXE_Title,
-                'EXE_Type' => $request->EXE_Type,
-                'EXE_Instructions' => $request->EXE_Instructions,
-                'EXE_DifficultyLevel' => $request->EXE_DifficultyLevel,
-                'EXE_ROO_ID' => $request->EXE_ROO_ID
+                'EXC_Title' => $request->EXC_Title,
+                'EXC_Type' => $request->EXC_Type,
+                'EXC_Instructions' => $request->EXC_Instructions,
+                'EXC_DifficultyLevel' => $request->EXC_DifficultyLevel,
+                'EXC_ROO_ID' => $request->EXC_ROO_ID
             ]);
 
             return response()->json([
@@ -99,7 +99,7 @@ class ExcerciseController extends Controller
                 ], 404);
             }
 
-            $excercises = Excercise::where('EXE_ROO_ID', $room)->get();
+            $excercises = Excercise::where('EXC_ROO_ID', $room)->get();
 
             return response()->json([
                 'success' => true,
@@ -184,27 +184,4 @@ class ExcerciseController extends Controller
         //
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(Excercise $excercise)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, Excercise $excercise)
-    {
-        //
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(Excercise $excercise)
-    {
-        //
-    }
 }
