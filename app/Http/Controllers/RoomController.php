@@ -105,38 +105,7 @@ class RoomController extends Controller
         return $code;
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function getRoom(Room $room)
-    {
-         try {
-            $user = JWTAuth::parseToken()->authenticate();
-            
-            if ($room->ROO_USR_ID !== $user->USR_ID) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'No tienes permiso para ver este room'
-                ], 403);
-            }
-
-            $room->load('user', 'exercises');
-            
-            return response()->json([
-                'success' => true,
-                'room' => $room
-            ], 200);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Error al obtener room',
-                'error' => $e->getMessage()
-            ], 500);
-        }
-    }
-
-    public function getRoomData(Room $room)
+    public function getRoomExcercises(Room $room)
     {
          try {
             $user = JWTAuth::parseToken()->authenticate();
@@ -149,7 +118,7 @@ class RoomController extends Controller
             }
 
             $room->load('userrooms.user');
-            $excercises = Excercise::where('EXE_ROO_ID', $room->ROO_ID)->get();
+            $excercises = Excercise::where('EXC_ROO_ID', $room->ROO_ID)->get();
 
             return response()->json([
                 'success' => true,

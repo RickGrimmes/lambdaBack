@@ -19,6 +19,13 @@ class Excercise extends Model
         'EXC_Instructions',
         'EXC_DifficultyLevel',
         'EXC_ROO_ID',
+
+        'EXC_Media1',
+        'EXC_Media2',
+        'EXC_Media3',
+        'EXC_Media4',
+        'EXC_URL1',
+        'EXC_URL2',
     ];
 
     /**
@@ -46,10 +53,5 @@ class Excercise extends Model
     public function routines()
     {
         return $this->hasMany(Routine::class, 'ROU_EXC_ID', 'EXC_ID');
-    }
-
-    public function media()
-    {
-        return $this->hasMany(ExcerciseMedia::class, 'MED_EXC_ID', 'EXC_ID');
     }
 }

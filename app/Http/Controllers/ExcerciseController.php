@@ -116,7 +116,6 @@ class ExcerciseController extends Controller
             ], 500);
         }
     }
-
     
     public function getExcercise($excercise)
     {
@@ -175,13 +174,4 @@ class ExcerciseController extends Controller
             ], 500);
         }
     }
-
-    /**
-     * Display the specified resource.
-     */
-    public function show(Excercise $excercise)
-    {
-        //
-    }
-
 }
