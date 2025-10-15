@@ -18,7 +18,7 @@ class ExcerciseController extends Controller
             'EXC_Type' => 'nullable|in:Calentamiento,Calistenia,Musculatura,Elasticidad,Resistencia,Médico',
             'EXC_Instructions' => 'nullable|string',
             'EXC_DifficultyLevel' => 'nullable|in:PRINCIPIANTE,INTERMEDIO,AVANZADO',
-            'EXC_ROO_ID' => 'required|integer|exists:rooms,id'
+            'EXC_ROO_ID' => 'required|integer'
         ]);
 
         if ($validator->fails()) {
@@ -99,7 +99,7 @@ class ExcerciseController extends Controller
                 ], 404);
             }
 
-            $excercises = Excercise::where('EXC_ROO_ID', $room)->get();
+            $excercises = Excercise::where('EXC_ROO_ID', $room->ROO_ID)->get();
 
             return response()->json([
                 'success' => true,

@@ -17,6 +17,9 @@ Route::middleware('auth:api')->group(function () {
 
     #region ADMIN
     Route::prefix('admin')->group(function () {
+        Route::post('createUser', [UserController::class, 'createUser']);
+        Route::put('updateUser/{userId}', [UserController::class, 'updateUser']);
+        Route::delete('deleteUser/{userId}', [UserController::class, 'deleteUser']);
         Route::get('getAllUsers/{filter}', [UserController::class, 'getAllUsers']);
     });
     #endregion

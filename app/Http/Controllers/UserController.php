@@ -45,7 +45,8 @@ class UserController extends Controller
                 'USR_Email' => $request->USR_Email,
                 'USR_Phone' => $request->USR_Phone,
                 'USR_Password' => Hash::make($request->USR_Password),
-                'USR_UserRole' => $request->USR_UserRole
+                'USR_UserRole' => $request->USR_UserRole,
+                'USR_FCM' => 'token_hardcodeado_temporal'
             ]);
 
             return response()->json([
@@ -135,6 +136,8 @@ class UserController extends Controller
         $validator = Validator::make($request->all(), [
             'USR_Name' => 'sometimes|required|string|min:2|max:50',
             'USR_LastName' => 'sometimes|required|string|min:2|max:50',
+            'USR_Email' => 'sometimes|required|email|max:255',
+            'USR_Phone' => 'sometimes|required|max:10',
             'USR_Password' => 'sometimes|required|string|min:8|max:255',
         ]);
 
@@ -163,6 +166,30 @@ class UserController extends Controller
                 ], 404);
             }
 
+            // Validar email único si se está actualizando
+            if ($request->has('USR_Email') && $request->USR_Email !== $user->USR_Email) {
+                $emailExists = User::where('USR_Email', $request->USR_Email)->exists();
+                if ($emailExists) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Error de validación',
+                        'errors' => ['USR_Email' => ['El email ya está en uso']]
+                    ], 422);
+                }
+            }
+
+            // Validar teléfono único si se está actualizando
+            if ($request->has('USR_Phone') && $request->USR_Phone !== $user->USR_Phone) {
+                $phoneExists = User::where('USR_Phone', $request->USR_Phone)->exists();
+                if ($phoneExists) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Error de validación',
+                        'errors' => ['USR_Phone' => ['El teléfono ya está en uso']]
+                    ], 422);
+                }
+            }
+
             if ($request->has('USR_Password')) {
                 $request->merge(['USR_Password' => Hash::make($request->USR_Password)]);
             }
@@ -170,10 +197,13 @@ class UserController extends Controller
             $user->update($request->only([
                 'USR_Name',
                 'USR_LastName',
+                'USR_Email',
+                'USR_Phone',
                 'USR_Password',
             ]));
 
             $user->refresh();
+            $user->makeHidden(['USR_Password']);
 
             return response()->json([
                 'success' => true,
@@ -181,6 +211,104 @@ class UserController extends Controller
                 'data' => $user
             ], 200);
 
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al actualizar el usuario',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function updateUser(Request $request, $userId)
+    {
+        try {
+            $currentUser = JWTAuth::parseToken()->authenticate();
+
+            if ($currentUser->USR_UserRole !== 'admin') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Solo los administradores pueden editar usuarios'
+                ], 403);
+            }
+
+            $user = User::find($userId);
+
+            if (!$user) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Usuario no encontrado'
+                ], 404);
+            }
+
+            $validator = Validator::make($request->all(), [
+                'USR_Name' => 'sometimes|required|string|min:2|max:50',
+                'USR_LastName' => 'sometimes|required|string|min:2|max:50',
+                'USR_Email' => 'sometimes|required|email|max:255',
+                'USR_Phone' => 'sometimes|required|max:10',
+                'USR_Password' => 'sometimes|required|string|min:8|max:255',
+                'USR_UserRole' => 'sometimes|required|in:trainer,trainee,admin'
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error de validación',
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+
+            // Validar email único si se está actualizando
+            if ($request->has('USR_Email') && $request->USR_Email !== $user->USR_Email) {
+                $emailExists = User::where('USR_Email', $request->USR_Email)->exists();
+                if ($emailExists) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Error de validación',
+                        'errors' => ['USR_Email' => ['El email ya está en uso']]
+                    ], 422);
+                }
+            }
+
+            // Validar teléfono único si se está actualizando
+            if ($request->has('USR_Phone') && $request->USR_Phone !== $user->USR_Phone) {
+                $phoneExists = User::where('USR_Phone', $request->USR_Phone)->exists();
+                if ($phoneExists) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Error de validación',
+                        'errors' => ['USR_Phone' => ['El teléfono ya está en uso']]
+                    ], 422);
+                }
+            }
+
+            if ($request->has('USR_Password')) {
+                $request->merge(['USR_Password' => Hash::make($request->USR_Password)]);
+            }
+
+            $user->update($request->only([
+                'USR_Name',
+                'USR_LastName',
+                'USR_Email',
+                'USR_Phone',
+                'USR_Password',
+                'USR_UserRole'
+            ]));
+
+            $user->refresh();
+            $user->makeHidden(['USR_Password']);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Usuario actualizado exitosamente por el administrador',
+                'data' => $user
+            ], 200);
+
+        } catch (JWTException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Token inválido o expirado'
+            ], 401);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -236,7 +364,76 @@ class UserController extends Controller
         }
     }
 
-    public function getAllUsers(Request $request)
+    public function createUser(Request $request)
+    {
+        try {
+            $currentUser = JWTAuth::parseToken()->authenticate();
+
+            if ($currentUser->USR_UserRole !== 'admin') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Solo los administradores pueden crear usuarios'
+                ], 403);
+            }
+
+            $validator = Validator::make($request->all(), [
+                'USR_Name' => 'required|string|min:2|max:50',
+                'USR_LastName' => 'required|string|min:2|max:50',
+                'USR_Email' => 'required|email|unique:Users,USR_Email|max:255',
+                'USR_Phone' => 'required|unique:Users,USR_Phone|max:10',
+                'USR_Password' => 'required|string|min:8|max:255',
+                'USR_UserRole' => 'required|in:trainer,trainee',
+                'USR_FCM' => 'nullable|string'
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error de validación',
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+
+            if ($request->USR_UserRole === 'admin') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No se puede crear usuarios con rol admin'
+                ], 403);
+            }
+
+            $user = User::create([
+                'USR_Name' => $request->USR_Name,
+                'USR_LastName' => $request->USR_LastName,
+                'USR_Email' => $request->USR_Email,
+                'USR_Phone' => $request->USR_Phone,
+                'USR_Password' => Hash::make($request->USR_Password),
+                'USR_UserRole' => $request->USR_UserRole,
+                'USR_FCM' => $request->USR_FCM ?? 'token_hardcodeado_temporal'
+            ]);
+
+            $user->makeHidden(['USR_Password']);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Usuario creado exitosamente por el administrador',
+                'data' => $user
+            ], 201);
+
+        } catch (JWTException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Token inválido o expirado'
+            ], 401);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al crear el usuario',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function getAllUsers($filter)
     {
         try {
             $currentUser = JWTAuth::parseToken()->authenticate();
@@ -248,7 +445,7 @@ class UserController extends Controller
                 ], 403);
             }
 
-            $validator = Validator::make($request->all(), [
+            $validator = Validator::make(['filter' => $filter], [
                 'filter' => 'required|in:trainer,trainee,All'
             ]);
 
@@ -260,7 +457,6 @@ class UserController extends Controller
                 ], 422);
             }
 
-            $filter = $request->filter;
 
             switch ($filter) {
                 case 'trainer':
@@ -302,6 +498,59 @@ class UserController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Error al obtener los usuarios',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function deleteUser($userId)
+    {
+        try {
+            $currentUser = JWTAuth::parseToken()->authenticate();
+
+            if ($currentUser->USR_UserRole !== 'admin') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Solo los administradores pueden eliminar usuarios'
+                ], 403);
+            }
+
+            $user = User::find($userId);
+
+            if (!$user) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Usuario no encontrado'
+                ], 404);
+            }
+
+            // No permitir eliminar al propio admin
+            if ($user->USR_ID === $currentUser->USR_ID) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No puedes eliminarte a ti mismo'
+                ], 403);
+            }
+
+            // Eliminar permanentemente el usuario
+            $userName = $user->USR_Name . ' ' . $user->USR_LastName;
+            $user->delete();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Usuario eliminado permanentemente',
+                'deleted_user' => $userName
+            ], 200);
+
+        } catch (JWTException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Token inválido o expirado'
+            ], 401);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al eliminar el usuario',
                 'error' => $e->getMessage()
             ], 500);
         }
