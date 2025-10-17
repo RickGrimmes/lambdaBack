@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Excercise;
 use App\Models\Room;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Tymon\JWTAuth\Facades\JWTAuth;
@@ -15,15 +16,63 @@ class RoomController extends Controller
     /**
      * Display a listing of the resource.
      */
+    public function getMyRoomsData()
+    {
+        try {
+            $user = JWTAuth::parseToken()->authenticate();
+            
+            $rooms = Room::where('ROO_USR_ID', $user->USR_ID)
+                        ->withCount(['exercises', 'userrooms'])
+                        ->get();
+
+            $totalRooms = $rooms->count();
+            $totalExercises = $rooms->sum('exercises_count');
+            $totalTrainees = $rooms->sum('userrooms_count');
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'total_rooms' => $totalRooms,
+                    'total_exercises' => $totalExercises,
+                    'total_trainees' => $totalTrainees
+                ]
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener estadísticas de rooms',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
     public function getMyRooms(Request $request)
     {
         try {
             $user = JWTAuth::parseToken()->authenticate();
-            $rooms = Room::where('ROO_USR_ID', $user->USR_ID)->with('user')->get();
+            
+            $rooms = Room::where('ROO_USR_ID', $user->USR_ID)
+                        ->withCount(['exercises', 'userrooms']) 
+                        ->get();
+
+            $roomsWithCounts = $rooms->map(function($room) {
+                return [
+                    'ROO_ID' => $room->ROO_ID,
+                    'ROO_Name' => $room->ROO_Name,
+                    'ROO_Code' => $room->ROO_Code,
+                    'ROO_USR_ID' => $room->ROO_USR_ID,
+                    'created_at' => $room->created_at,
+                    'updated_at' => $room->updated_at,
+                    'total_exercises' => $room->exercises_count,
+                    'trainees_count' => $room->userrooms_count
+                ];
+            });
 
             return response()->json([
                 'success' => true,
-                'rooms' => $rooms
+                'rooms' => $roomsWithCounts,
+                'total_rooms' => $rooms->count()
             ], 200);
 
         } catch (\Exception $e) {
@@ -33,7 +82,7 @@ class RoomController extends Controller
                 'error' => $e->getMessage()
             ], 500);
         }
-    } 
+    }
 
     public function createRoom(Request $request)
     {
@@ -222,6 +271,44 @@ class RoomController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Error al buscar room',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function deleteRoom($room)
+    {
+        try {
+            $user = JWTAuth::parseToken()->authenticate();
+            $room = Room::find($room);
+
+            if (!$room) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Room no encontrado'
+                ], 404);
+            }
+
+            if ($room->ROO_USR_ID !== $user->USR_ID) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No tienes permiso para eliminar este room'
+                ], 403);
+            }
+
+            Excercise::where('EXC_ROO_ID', $room->ROO_ID)->delete();
+
+            $room->delete();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Room y sus ejercicios eliminados exitosamente'
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al eliminar room',
                 'error' => $e->getMessage()
             ], 500);
         }
