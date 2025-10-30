@@ -14,8 +14,8 @@ return new class extends Migration
         Schema::create('Excercises', function (Blueprint $table) {
             $table->id('EXC_ID');
             $table->string('EXC_Title');
-            $table->enum('EXC_Type', ['Calentamiento', 'Calistenia', 'Musculatura', 'Elasticidad', 'Resistencia', 'Médico']);
-            $table->text('EXC_Instructions');
+            $table->enum('EXC_Type', ['Calentamiento', 'Calistenia', 'Musculatura', 'Elasticidad', 'Resistencia', 'Médico'])->nullable();
+            $table->text('EXC_Instructions')->nullable();
             $table->foreignId('EXC_ROO_ID')->constrained('Rooms', 'ROO_ID')->onDelete('cascade');
             $table->timestamps();
         });

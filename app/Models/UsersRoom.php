@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class UsersRoom extends Model
 {
-    protected $table = 'UsersRooms';
+    protected $table = 'Users_Rooms';
     protected $primaryKey = 'URO_ID';
     /**
      * The attributes that are mass assignable.

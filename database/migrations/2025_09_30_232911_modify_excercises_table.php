@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('Excercises', function (Blueprint $table) {
-            $table->enum('EXC_DifficultyLevel', ['PRINCIPIANTE', 'INTERMEDIO', 'AVANZADO'])->after('EXC_Instructions');
+            $table->enum('EXC_DifficultyLevel', ['PRINCIPIANTE', 'INTERMEDIO', 'AVANZADO'])->nullable()->after('EXC_Instructions');
         });
     }
 

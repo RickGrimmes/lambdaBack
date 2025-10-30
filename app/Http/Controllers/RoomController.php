@@ -22,11 +22,11 @@ class RoomController extends Controller
             $user = JWTAuth::parseToken()->authenticate();
             
             $rooms = Room::where('ROO_USR_ID', $user->USR_ID)
-                        ->withCount(['exercises', 'userrooms'])
+                        ->withCount(['excercises', 'userrooms'])
                         ->get();
 
             $totalRooms = $rooms->count();
-            $totalExercises = $rooms->sum('exercises_count');
+            $totalExercises = $rooms->sum('excercises_count');
             $totalTrainees = $rooms->sum('userrooms_count');
 
             return response()->json([
@@ -53,7 +53,7 @@ class RoomController extends Controller
             $user = JWTAuth::parseToken()->authenticate();
             
             $rooms = Room::where('ROO_USR_ID', $user->USR_ID)
-                        ->withCount(['exercises', 'userrooms']) 
+                        ->withCount(['excercises', 'userrooms']) 
                         ->get();
 
             $roomsWithCounts = $rooms->map(function($room) {
@@ -64,7 +64,7 @@ class RoomController extends Controller
                     'ROO_USR_ID' => $room->ROO_USR_ID,
                     'created_at' => $room->created_at,
                     'updated_at' => $room->updated_at,
-                    'total_exercises' => $room->exercises_count,
+                    'total_exercises' => $room->excercises_count,
                     'trainees_count' => $room->userrooms_count
                 ];
             });
