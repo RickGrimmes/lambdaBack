@@ -1,0 +1,75 @@
+# Nombre del Workflow
+name: Entrega Continua de Artefacto Laravel (Backend)
+
+# Disparador: al hacer push a la rama principal
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  # 1. Job de Construcción y Entrega (CI/CD)
+  build_artifact:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout del Repositorio
+        uses: actions/checkout@v4
+      
+      - name: Configurar PHP, Composer y extensiones de Laravel
+        # Acción especializada para instalar PHP y Composer
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2' # Usa la versión de PHP de tu proyecto
+          extensions: dom, curl, libxml, mbstring, zip, pdo, pdo_mysql 
+          tools: composer:v2
+      
+      - name: Crear archivo .env de pruebas
+        run: php -r "file_exists('.env') || copy('.env.example', '.env');"
+      
+      - name: Instalar Dependencias de Composer (Creación del Artefacto)
+        # Esto instala 'vendor/' y optimiza el cargador automático, creando el artefacto
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader
+        
+      - name: Ejecutar Pruebas Unitarias (OPCIONAL: Comentar si no hay pruebas)
+        # Si el proyecto no tiene PHPUnit configurado, esta línea fallará.
+        # Si no estás seguro, comenta esta línea: # run: vendor/bin/phpunit
+        run: vendor/bin/phpunit
+        
+      - name: Almacenar Artefacto (Entrega Continua)
+        # Almacena el código completo (incluyendo vendor/ que es el artefacto)
+        uses: actions/upload-artifact@v4
+        with:
+          name: laravel-backend-v${{ github.sha }} 
+          path: ./ 
+          retention-days: 7
+          
+      - name: Confirmar Entrega
+        run: echo "Artefacto de Laravel (código + vendor) ha sido ENTREGADO y almacenado."
+
+  # 2. Job de Despliegue Simulado a Preproducción
+  deploy_simulado:
+    needs: build_artifact 
+    runs-on: ubuntu-latest
+    
+    # Asignación a Environment para simular aprobación manual
+    environment: 
+      name: Preproduccion
+      
+    steps:
+      - name: Simulación de Aprobación de Despliegue
+        run: echo "Esperando aprobación manual en el Environment 'Preproduccion'..."
+      
+      - name: Descargar Artefacto Entregado
+        uses: actions/download-artifact@v4
+        with:
+          name: laravel-backend-v${{ github.sha }}
+          path: ./staging-server-deployment/
+          
+      - name: Despliegue Automatizado a Servidor SIMULADO
+        run: |
+          echo "Simulando comandos de Despliegue Automatizado en el servidor:"
+          echo "Ejecutando php artisan migrate --force"
+          echo "Ejecutando php artisan cache:clear"
+          ls -R ./staging-server-deployment/
+          echo "--- Despliegue a Preproducción Completo. ---"
