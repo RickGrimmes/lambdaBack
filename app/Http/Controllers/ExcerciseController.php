@@ -215,4 +215,174 @@ class ExcerciseController extends Controller
             ], 500);
         }
     }
+
+    public function editExcercise(Request $request, $excercise)
+    {
+        try {
+            $user = JWTAuth::parseToken()->authenticate();
+
+            if (!$user) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Usuario no encontrado'
+                ], 404);
+            }
+
+            // DEBUG: Ver qué datos llegan
+            \Log::info('EditExcercise - Datos recibidos:', $request->all());
+            \Log::info('EditExcercise - Archivos:', $request->allFiles());
+
+            $validator = Validator::make($request->all(), [
+                'EXC_Title' => 'nullable|string|max:255',
+                'EXC_Type' => 'nullable|in:Calentamiento,Calistenia,Musculatura,Elasticidad,Resistencia,Médico',
+                'EXC_Instructions' => 'nullable|string',
+                'EXC_DifficultyLevel' => 'nullable|in:PRINCIPIANTE,INTERMEDIO,AVANZADO',
+                'EXC_Media1' => 'nullable|file|mimes:jpeg,png,jpg,webp,mp4,mov|max:20480',
+                'EXC_Media2' => 'nullable|file|mimes:jpeg,png,jpg,webp,mp4,mov|max:20480',
+                'EXC_Media3' => 'nullable|file|mimes:jpeg,png,jpg,webp,mp4,mov|max:20480',
+                'EXC_Media4' => 'nullable|file|mimes:jpeg,png,jpg,webp,mp4,mov|max:20480',
+                'EXC_URL1' => 'nullable|url|max:255',
+                'EXC_URL2' => 'nullable|url|max:255'
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error de validación',
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+
+            $excerciseModel = Excercise::with('room')->find($excercise);
+
+            if (!$excerciseModel) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Ejercicio no encontrado'
+                ], 404);
+            }
+
+            if ($excerciseModel->room->ROO_USR_ID !== $user->USR_ID) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No tienes permiso para editar este ejercicio'
+                ], 403);
+            }
+
+            $updateData = [];
+
+            // Actualizar campos de texto solo si tienen valor
+            if ($request->filled('EXC_Title')) {
+                $updateData['EXC_Title'] = $request->input('EXC_Title');
+            }
+            if ($request->filled('EXC_Type')) {
+                $updateData['EXC_Type'] = $request->input('EXC_Type');
+            }
+            if ($request->filled('EXC_Instructions')) {
+                $updateData['EXC_Instructions'] = $request->input('EXC_Instructions');
+            }
+            if ($request->filled('EXC_DifficultyLevel')) {
+                $updateData['EXC_DifficultyLevel'] = $request->input('EXC_DifficultyLevel');
+            }
+
+            $mediaPaths = [];
+            $uploadedFilesCount = 0;
+            $exerciseFolder = null;
+
+            for ($i = 1; $i <= 4; $i++) {
+                $fieldName = "EXC_Media{$i}";
+                
+                if ($request->hasFile($fieldName)) {
+                    if (!$exerciseFolder) {
+                        $exerciseFolder = "exercises/exercise_{$excerciseModel->EXC_ID}";
+                    }
+                    
+                    $file = $request->file($fieldName);
+                    $fileName = time() . "_media{$i}_" . $file->getClientOriginalName();
+                    
+                    $path = $file->storeAs($exerciseFolder, $fileName, 'public');
+                    $updateData["EXC_Media{$i}"] = "/storage/" . $path;
+                    $uploadedFilesCount++;
+                }
+            }
+
+            if ($request->filled('EXC_URL1')) {
+                $updateData['EXC_URL1'] = $request->input('EXC_URL1');
+            }
+            if ($request->filled('EXC_URL2')) {
+                $updateData['EXC_URL2'] = $request->input('EXC_URL2');
+            }
+
+            if (!empty($updateData)) {
+                $excerciseModel->update($updateData);
+                $excerciseModel->refresh();
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Ejercicio actualizado exitosamente',
+                'data' => $excerciseModel,
+                'uploaded_files' => $uploadedFilesCount,
+                'updated_fields' => array_keys($updateData)
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al actualizar ejercicio',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function deleteExcercise($excercise)
+    {
+        try {
+            $user = JWTAuth::parseToken()->authenticate();
+
+            if (!$user) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Usuario no encontrado'
+                ], 404);
+            }
+
+            $excerciseModel = Excercise::with('room')->find($excercise);
+
+            if (!$excerciseModel) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Ejercicio no encontrado'
+                ], 404);
+            }
+
+            if ($excerciseModel->room->ROO_USR_ID !== $user->USR_ID) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No tienes permiso para eliminar este ejercicio'
+                ], 403);
+            }
+
+            $roomId = $excerciseModel->EXC_ROO_ID;
+            $exerciseTitle = $excerciseModel->EXC_Title;
+
+            $excerciseModel->delete();
+
+            $remainingExercises = Excercise::where('EXC_ROO_ID', $roomId)->count();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Ejercicio eliminado exitosamente',
+                'deleted_exercise' => $exerciseTitle,
+                'remaining_exercises_in_room' => $remainingExercises
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al eliminar ejercicio',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
 }
