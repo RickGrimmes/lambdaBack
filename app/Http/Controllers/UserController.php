@@ -10,6 +10,8 @@ use Illuminate\Support\Facades\Validator;
 use Tymon\JWTAuth\Facades\JWTAuth;
 use Tymon\JWTAuth\Exceptions\JWTException;
 
+use App\Services\FirebaseNotificationService;
+
 class UserController extends Controller
 {
     public function register(Request $request)
@@ -96,11 +98,32 @@ class UserController extends Controller
 
             $token = JWTAuth::fromUser($user);
 
+            $notificationSent = false;
+            if ($request->has('fcm_token') && $request->fcm_token) {
+                $user->USR_FCM = $request->fcm_token;
+                $user->save();
+
+                // Enviar notificación de prueba
+                try {
+                    $firebaseService = new FirebaseNotificationService();
+                    $result = $firebaseService->sendToDevice(
+                        $request->fcm_token,
+                        'Hola title',
+                        'Hola body',
+                        ['type' => 'login_test']
+                    );
+                    $notificationSent = $result['success'];
+                } catch (\Exception $e) {
+                    // Si falla la notificación, no afectar el login
+                    $notificationSent = false;
+                }
+            }
+
             return response()->json([
                 'success' => true,
                 'message' => 'Inicio de sesión exitoso',
                 'data' => $user,
-                'token' => $token
+                'token' => $token,
             ], 200);
 
         } catch (\Exception $e) {

@@ -19,10 +19,10 @@ class ExcerciseController extends Controller
             'EXC_Instructions' => 'nullable|string',
             'EXC_DifficultyLevel' => 'nullable|in:PRINCIPIANTE,INTERMEDIO,AVANZADO',
             'EXC_ROO_ID' => 'required|integer',
-            'EXC_Media1' => 'nullable|file|mimes:jpeg,png,jpg,webp,mp4,mov|max:20480',
-            'EXC_Media2' => 'nullable|file|mimes:jpeg,png,jpg,webp,mp4,mov|max:20480', 
-            'EXC_Media3' => 'nullable|file|mimes:jpeg,png,jpg,webp,mp4,mov|max:20480',
-            'EXC_Media4' => 'nullable|file|mimes:jpeg,png,jpg,webp,mp4,mov|max:20480',
+            'EXC_Media1' => 'nullable|image|mimes:jpeg,png,jpg,webp,mp4,mov|max:20480',
+            'EXC_Media2' => 'nullable|image|mimes:jpeg,png,jpg,webp,mp4,mov|max:20480', 
+            'EXC_Media3' => 'nullable|image|mimes:jpeg,png,jpg,webp,mp4,mov|max:20480',
+            'EXC_Media4' => 'nullable|image|mimes:jpeg,png,jpg,webp,mp4,mov|max:20480',
             'EXC_URL1' => 'nullable|url|max:255',
             'EXC_URL2' => 'nullable|url|max:255'
         ]);
@@ -69,7 +69,6 @@ class ExcerciseController extends Controller
                 'EXC_ROO_ID' => $request->EXC_ROO_ID
             ]);
 
-            // Manejo de archivos multimedia
             $mediaPaths = [];
             $uploadedFilesCount = 0;
             $exerciseFolder = null;
@@ -91,7 +90,6 @@ class ExcerciseController extends Controller
                 }
             }
 
-            // Actualizar con las rutas de los archivos y URLs
             $updateData = [];
         
             for ($i = 1; $i <= 4; $i++) {
@@ -115,8 +113,7 @@ class ExcerciseController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Ejercicio creado exitosamente',
-                'data' => $excercise,
-                'uploaded_files' => $uploadedFilesCount
+                'data' => $excercise
             ], 201);
 
         } catch (\Exception $e) {
@@ -179,7 +176,7 @@ class ExcerciseController extends Controller
                 ], 404);
             }
 
-            $excercise = Excercise::with('room')->find($excercise);
+            $excercise = Excercise::with('room', 'media')->find($excercise);
             
             if (!$excercise) {
                 return response()->json([
@@ -188,21 +185,23 @@ class ExcerciseController extends Controller
                 ], 404);
             }
 
-            // Contar imágenes y URLs
             $totalImages = 0;
             $totalUrls = 0;
             
-            if ($excercise->EXC_Media1) $totalImages++;
-            if ($excercise->EXC_Media2) $totalImages++;
-            if ($excercise->EXC_Media3) $totalImages++;
-            if ($excercise->EXC_Media4) $totalImages++;
-            if ($excercise->EXC_URL1) $totalUrls++;
-            if ($excercise->EXC_URL2) $totalUrls++;
+            foreach ($excercise->media as $media) {
+                if ($media->MED_Media1) $totalImages++;
+                if ($media->MED_Media2) $totalImages++;
+                if ($media->MED_Media3) $totalImages++;
+                if ($media->MED_Media4) $totalImages++;
+                if ($media->MED_URL1) $totalUrls++;
+                if ($media->MED_URL2) $totalUrls++;
+            }
 
             return response()->json([
                 'success' => true,
                 'message' => 'Ejercicio obtenido exitosamente',
                 'data' => $excercise,
+                'media' => $excercise->media,
                 'total_images' => $totalImages,
                 'total_urls' => $totalUrls
             ], 200);
@@ -228,19 +227,21 @@ class ExcerciseController extends Controller
                 ], 404);
             }
 
-            // DEBUG: Ver qué datos llegan
-            \Log::info('EditExcercise - Datos recibidos:', $request->all());
-            \Log::info('EditExcercise - Archivos:', $request->allFiles());
+            if ($user->USR_Type !== 'trainee') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No tienes permisos para editar ejercicios'
+                ], 403);
+            }
 
             $validator = Validator::make($request->all(), [
-                'EXC_Title' => 'nullable|string|max:255',
                 'EXC_Type' => 'nullable|in:Calentamiento,Calistenia,Musculatura,Elasticidad,Resistencia,Médico',
                 'EXC_Instructions' => 'nullable|string',
                 'EXC_DifficultyLevel' => 'nullable|in:PRINCIPIANTE,INTERMEDIO,AVANZADO',
-                'EXC_Media1' => 'nullable|file|mimes:jpeg,png,jpg,webp,mp4,mov|max:20480',
-                'EXC_Media2' => 'nullable|file|mimes:jpeg,png,jpg,webp,mp4,mov|max:20480',
-                'EXC_Media3' => 'nullable|file|mimes:jpeg,png,jpg,webp,mp4,mov|max:20480',
-                'EXC_Media4' => 'nullable|file|mimes:jpeg,png,jpg,webp,mp4,mov|max:20480',
+                'EXC_Media1' => 'nullable|image|mimes:jpeg,png,jpg,webp,mp4,mov|max:20480',
+                'EXC_Media2' => 'nullable|image|mimes:jpeg,png,jpg,webp,mp4,mov|max:20480',
+                'EXC_Media3' => 'nullable|image|mimes:jpeg,png,jpg,webp,mp4,mov|max:20480',
+                'EXC_Media4' => 'nullable|image|mimes:jpeg,png,jpg,webp,mp4,mov|max:20480',
                 'EXC_URL1' => 'nullable|url|max:255',
                 'EXC_URL2' => 'nullable|url|max:255'
             ]);
@@ -271,18 +272,14 @@ class ExcerciseController extends Controller
 
             $updateData = [];
 
-            // Actualizar campos de texto solo si tienen valor
-            if ($request->filled('EXC_Title')) {
-                $updateData['EXC_Title'] = $request->input('EXC_Title');
+            if ($request->has('EXC_Type')) {
+                $updateData['EXC_Type'] = $request->EXC_Type;
             }
-            if ($request->filled('EXC_Type')) {
-                $updateData['EXC_Type'] = $request->input('EXC_Type');
+            if ($request->has('EXC_Instructions')) {
+                $updateData['EXC_Instructions'] = $request->EXC_Instructions;
             }
-            if ($request->filled('EXC_Instructions')) {
-                $updateData['EXC_Instructions'] = $request->input('EXC_Instructions');
-            }
-            if ($request->filled('EXC_DifficultyLevel')) {
-                $updateData['EXC_DifficultyLevel'] = $request->input('EXC_DifficultyLevel');
+            if ($request->has('EXC_DifficultyLevel')) {
+                $updateData['EXC_DifficultyLevel'] = $request->EXC_DifficultyLevel;
             }
 
             $mediaPaths = [];
@@ -306,11 +303,11 @@ class ExcerciseController extends Controller
                 }
             }
 
-            if ($request->filled('EXC_URL1')) {
-                $updateData['EXC_URL1'] = $request->input('EXC_URL1');
+            if ($request->has('EXC_URL1')) {
+                $updateData['EXC_URL1'] = $request->EXC_URL1;
             }
-            if ($request->filled('EXC_URL2')) {
-                $updateData['EXC_URL2'] = $request->input('EXC_URL2');
+            if ($request->has('EXC_URL2')) {
+                $updateData['EXC_URL2'] = $request->EXC_URL2;
             }
 
             if (!empty($updateData)) {
@@ -347,6 +344,13 @@ class ExcerciseController extends Controller
                 ], 404);
             }
 
+            if ($user->USR_Type !== 'trainee') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No tienes permisos para eliminar ejercicios'
+                ], 403);
+            }
+
             $excerciseModel = Excercise::with('room')->find($excercise);
 
             if (!$excerciseModel) {
@@ -369,11 +373,19 @@ class ExcerciseController extends Controller
             $excerciseModel->delete();
 
             $remainingExercises = Excercise::where('EXC_ROO_ID', $roomId)->count();
+            
+            if ($remainingExercises === 0) {
+                Room::find($roomId)->delete();
+                $roomDeleted = true;
+            } else {
+                $roomDeleted = false;
+            }
 
             return response()->json([
                 'success' => true,
                 'message' => 'Ejercicio eliminado exitosamente',
                 'deleted_exercise' => $exerciseTitle,
+                'room_deleted' => $roomDeleted,
                 'remaining_exercises_in_room' => $remainingExercises
             ], 200);
 

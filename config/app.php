@@ -1,5 +1,7 @@
 <?php
 
+use Illuminate\Support\ServiceProvider;
+
 return [
 
     /*
@@ -123,4 +125,16 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | FCM Provider
+    |--------------------------------------------------------------------------
+    |
+    | Para que ya jale el fcm maldita sea aaaaa
+    |
+    */
+
+    'providers' => ServiceProvider::defaultProviders()->merge([
+        App\Providers\FirebaseServiceProvider::class,
+    ])->toArray(),
 ];
