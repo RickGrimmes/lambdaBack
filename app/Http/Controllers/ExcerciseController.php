@@ -176,7 +176,7 @@ class ExcerciseController extends Controller
                 ], 404);
             }
 
-            $excercise = Excercise::with('room', 'media')->find($excercise);
+            $excercise = Excercise::with('room')->find($excercise);
             
             if (!$excercise) {
                 return response()->json([
@@ -185,23 +185,21 @@ class ExcerciseController extends Controller
                 ], 404);
             }
 
+            // Contar imágenes y URLs directamente del ejercicio
             $totalImages = 0;
             $totalUrls = 0;
             
-            foreach ($excercise->media as $media) {
-                if ($media->MED_Media1) $totalImages++;
-                if ($media->MED_Media2) $totalImages++;
-                if ($media->MED_Media3) $totalImages++;
-                if ($media->MED_Media4) $totalImages++;
-                if ($media->MED_URL1) $totalUrls++;
-                if ($media->MED_URL2) $totalUrls++;
-            }
+            if ($excercise->EXC_Media1) $totalImages++;
+            if ($excercise->EXC_Media2) $totalImages++;
+            if ($excercise->EXC_Media3) $totalImages++;
+            if ($excercise->EXC_Media4) $totalImages++;
+            if ($excercise->EXC_URL1) $totalUrls++;
+            if ($excercise->EXC_URL2) $totalUrls++;
 
             return response()->json([
                 'success' => true,
                 'message' => 'Ejercicio obtenido exitosamente',
                 'data' => $excercise,
-                'media' => $excercise->media,
                 'total_images' => $totalImages,
                 'total_urls' => $totalUrls
             ], 200);

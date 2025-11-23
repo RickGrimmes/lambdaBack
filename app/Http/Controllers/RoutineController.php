@@ -132,7 +132,7 @@ class RoutineController extends Controller
             }
 
             $routines = Routine::where('ROU_USR_ID', $user->USR_ID)
-                            ->with(['exercise' => function($query) {
+                            ->with(['excercise' => function($query) {
                                 $query->select('EXC_ID', 'EXC_Title', 'EXC_Type', 'EXC_Instructions', 'EXC_DifficultyLevel', 'EXC_Media1', 'EXC_Media2', 'EXC_Media3', 'EXC_Media4', 'EXC_URL1', 'EXC_URL2');
                             }])
                             ->orderBy('created_at', 'desc')
