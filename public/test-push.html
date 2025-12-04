@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test WebPush - Lambda</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        .status {
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+        .status.info { background: #e3f2fd; color: #1976d2; }
+        .status.success { background: #e8f5e9; color: #388e3c; }
+        .status.error { background: #ffebee; color: #c62828; }
+        .status.warning { background: #fff3e0; color: #f57c00; }
+        .input-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+        }
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        button {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 10px;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .btn-success {
+            background: #4caf50;
+            color: white;
+        }
+        .btn-danger {
+            background: #f44336;
+            color: white;
+        }
+        .notifications {
+            margin-top: 30px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .notification-item {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border-left: 4px solid #667eea;
+        }
+        .notification-item h4 {
+            margin-bottom: 5px;
+            color: #333;
+        }
+        .notification-item p {
+            color: #666;
+            font-size: 14px;
+        }
+        .notification-item small {
+            color: #999;
+            font-size: 12px;
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+        .badge-unread {
+            background: #f44336;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔔 Test WebPush</h1>
+        <p class="subtitle">Sistema de Notificaciones Lambda</p>
+
+        <div id="status" class="status info">
+            Inicializando...
+        </div>
+
+        <!-- Login -->
+        <div id="loginForm">
+            <div class="input-group">
+                <label>Email:</label>
+                <input type="email" id="email" placeholder="tu@email.com" value="carlos@example.com">
+            </div>
+            <div class="input-group">
+                <label>Contraseña:</label>
+                <input type="password" id="password" placeholder="********" value="password123">
+            </div>
+            <button class="btn-primary" onclick="login()">Iniciar Sesión</button>
+        </div>
+
+        <!-- Subscription -->
+        <div id="subscriptionPanel" style="display:none;">
+            <button class="btn-success" onclick="subscribeToPush()" id="subscribeBtn">
+                Suscribirse a Notificaciones
+            </button>
+            <button class="btn-danger" onclick="unsubscribeFromPush()" id="unsubscribeBtn" style="display:none;">
+                Desuscribirse
+            </button>
+            <button class="btn-primary" onclick="sendTestNotification()" id="testBtn" style="display:none;">
+                🧪 Enviar Notificación de Prueba
+            </button>
+        </div>
+
+        <!-- Notifications -->
+        <div id="notificationsPanel" style="display:none;">
+            <h3>Mis Notificaciones <span id="unreadBadge" class="badge badge-unread" style="display:none;">0</span></h3>
+            <div id="notificationsList" class="notifications"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://127.0.0.1:8000/api';
+        let token = null;
+        let vapidPublicKey = null;
+
+        // Inicialización
+        async function init() {
+            // Verificar soporte de Service Worker
+            if (!('serviceWorker' in navigator)) {
+                setStatus('Tu navegador no soporta notificaciones push', 'error');
+                return;
+            }
+
+            // Verificar soporte de notificaciones
+            if (!('Notification' in window)) {
+                setStatus('Tu navegador no soporta notificaciones', 'error');
+                return;
+            }
+
+            // Obtener clave pública VAPID
+            try {
+                const response = await fetch(`${API_URL}/vapid-public-key`);
+                const data = await response.json();
+                vapidPublicKey = data.public_key;
+                setStatus('Listo para iniciar sesión', 'info');
+            } catch (error) {
+                setStatus('Error al conectar con el servidor', 'error');
+                console.error(error);
+            }
+
+            // Registrar Service Worker
+            try {
+                const registration = await navigator.serviceWorker.register('/test-sw.js');
+                console.log('Service Worker registrado:', registration);
+            } catch (error) {
+                console.error('Error registrando Service Worker:', error);
+            }
+        }
+
+        // Login
+        async function login() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            setStatus('Iniciando sesión...', 'info');
+
+            try {
+                const response = await fetch(`${API_URL}/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        USR_Email: email,
+                        USR_Password: password
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    token = data.token;
+                    setStatus(`Bienvenido ${data.data.USR_Name}!`, 'success');
+                    document.getElementById('loginForm').style.display = 'none';
+                    document.getElementById('subscriptionPanel').style.display = 'block';
+                    document.getElementById('notificationsPanel').style.display = 'block';
+                    loadNotifications();
+                } else {
+                    setStatus('Error: ' + data.message, 'error');
+                }
+            } catch (error) {
+                setStatus('Error al iniciar sesión', 'error');
+                console.error(error);
+            }
+        }
+
+        // Suscribirse a Push
+        async function subscribeToPush() {
+            setStatus('Solicitando permiso...', 'info');
+
+            // Pedir permiso
+            const permission = await Notification.requestPermission();
+            if (permission !== 'granted') {
+                setStatus('Permiso denegado para notificaciones', 'error');
+                return;
+            }
+
+            setStatus('Suscribiendo dispositivo...', 'info');
+
+            try {
+                const registration = await navigator.serviceWorker.ready;
+                const subscription = await registration.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: urlBase64ToUint8Array(vapidPublicKey)
+                });
+
+                const subscriptionJSON = subscription.toJSON();
+
+                // Enviar suscripción al servidor
+                const response = await fetch(`${API_URL}/notifications/subscribe`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(subscriptionJSON)
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    setStatus('✅ Suscrito a notificaciones exitosamente!', 'success');
+                    document.getElementById('subscribeBtn').style.display = 'none';
+                    document.getElementById('unsubscribeBtn').style.display = 'block';
+                    document.getElementById('testBtn').style.display = 'block';
+                } else {
+                    setStatus('Error: ' + data.message, 'error');
+                }
+            } catch (error) {
+                setStatus('Error al suscribirse', 'error');
+                console.error(error);
+            }
+        }
+
+        // Desuscribirse
+        async function unsubscribeFromPush() {
+            try {
+                const registration = await navigator.serviceWorker.ready;
+                const subscription = await registration.pushManager.getSubscription();
+                
+                if (subscription) {
+                    await subscription.unsubscribe();
+                    
+                    const response = await fetch(`${API_URL}/notifications/unsubscribe`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({
+                            endpoint: subscription.endpoint
+                        })
+                    });
+
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        setStatus('Desuscrito exitosamente', 'info');
+                        document.getElementById('subscribeBtn').style.display = 'block';
+                        document.getElementById('unsubscribeBtn').style.display = 'none';
+                        document.getElementById('testBtn').style.display = 'none';
+                    }
+                }
+            } catch (error) {
+                setStatus('Error al desuscribirse', 'error');
+                console.error(error);
+            }
+        }
+
+        // Enviar notificación de prueba
+        async function sendTestNotification() {
+            setStatus('Enviando notificación de prueba...', 'info');
+
+            try {
+                const response = await fetch(`${API_URL}/notifications/test`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    setStatus('✅ Notificación enviada! Deberías recibirla en unos segundos', 'success');
+                    setTimeout(() => loadNotifications(), 2000);
+                } else {
+                    setStatus('Error: ' + data.message, 'error');
+                    console.error('Error:', data);
+                }
+            } catch (error) {
+                setStatus('Error al enviar notificación', 'error');
+                console.error(error);
+            }
+        }
+
+        // Cargar notificaciones
+        async function loadNotifications() {
+            try {
+                const response = await fetch(`${API_URL}/notifications/my`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Accept': 'application/json'
+                    }
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    const list = document.getElementById('notificationsList');
+                    const badge = document.getElementById('unreadBadge');
+                    
+                    if (result.unread_count > 0) {
+                        badge.textContent = result.unread_count;
+                        badge.style.display = 'inline-block';
+                    } else {
+                        badge.style.display = 'none';
+                    }
+
+                    if (result.data.data.length === 0) {
+                        list.innerHTML = '<p style="text-align:center; color:#999;">No hay notificaciones</p>';
+                    } else {
+                        list.innerHTML = result.data.data.map(notif => `
+                            <div class="notification-item">
+                                <h4>${notif.title} ${!notif.read ? '<span class="badge badge-unread">Nuevo</span>' : ''}</h4>
+                                <p>${notif.body}</p>
+                                <small>${new Date(notif.created_at).toLocaleString()}</small>
+                            </div>
+                        `).join('');
+                    }
+                }
+            } catch (error) {
+                console.error('Error cargando notificaciones:', error);
+            }
+        }
+
+        // Helpers
+        function setStatus(message, type) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = message;
+            statusDiv.className = `status ${type}`;
+        }
+
+        function urlBase64ToUint8Array(base64String) {
+            const padding = '='.repeat((4 - base64String.length % 4) % 4);
+            const base64 = (base64String + padding)
+                .replace(/\-/g, '+')
+                .replace(/_/g, '/');
+
+            const rawData = window.atob(base64);
+            const outputArray = new Uint8Array(rawData.length);
+
+            for (let i = 0; i < rawData.length; ++i) {
+                outputArray[i] = rawData.charCodeAt(i);
+            }
+            return outputArray;
+        }
+
+        // Recargar notificaciones cada 10 segundos
+        setInterval(() => {
+            if (token) {
+                loadNotifications();
+            }
+        }, 10000);
+
+        // Inicializar al cargar
+        init();
+    </script>
+</body>
+</html>
