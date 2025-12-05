@@ -8,10 +8,14 @@ use App\Http\Controllers\ExcerciseController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\MediaController;
 use App\Http\Controllers\UsersRoomController;
+use App\Http\Controllers\NotificationController;
 
 // USER (ENTRAN LOS 3 TIPOS DE USUARIO DE ALGUNA FORMA)
 Route::post('login', [UserController::class, 'login']);
 Route::post('register', [UserController::class, 'register']);
+
+// Obtener clave pública VAPID (sin autenticación)
+Route::get('vapid-public-key', [NotificationController::class, 'getVapidPublicKey']);
 
 Route::middleware('auth:api')->group(function () {
 
@@ -71,6 +75,16 @@ Route::middleware('auth:api')->group(function () {
     // EXCERCISE
     Route::get('getExcercisesByRoom/{room}', [ExcerciseController::class, 'getExcercisesByRoom']);
     Route::get('getExcercise/{excercise}', [ExcerciseController::class, 'getExcercise']); // ejercicio con media también
+
+    // NOTIFICATIONS
+    Route::post('notifications/subscribe', [NotificationController::class, 'subscribe']);
+    Route::post('notifications/unsubscribe', [NotificationController::class, 'unsubscribe']);
+    Route::get('notifications/my', [NotificationController::class, 'getMyNotifications']);
+    Route::get('notifications/unread-count', [NotificationController::class, 'getUnreadCount']);
+    Route::put('notifications/{notificationId}/read', [NotificationController::class, 'markAsRead']);
+    Route::put('notifications/read-all', [NotificationController::class, 'markAllAsRead']);
+    Route::delete('notifications/{notificationId}', [NotificationController::class, 'deleteNotification']);
+    Route::post('notifications/test', [NotificationController::class, 'testNotification']); // Para pruebas
 
     // ROUTINE
 

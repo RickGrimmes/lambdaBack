@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Excercise;
 use App\Models\Room;
+use App\Services\WebPushService;
 use Illuminate\Http\Request;
 use Tymon\JWTAuth\Facades\JWTAuth;
 use Tymon\JWTAuth\Exceptions\JWTException;
@@ -11,6 +12,7 @@ use Illuminate\Support\Facades\Validator;
 use App\Services\FirebaseNotificationService;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class ExcerciseController extends Controller
 {
@@ -433,6 +435,55 @@ class ExcerciseController extends Controller
                 'message' => 'Error al eliminar ejercicio',
                 'error' => $e->getMessage()
             ], 500);
+        }
+    }
+
+    /**
+     * Enviar notificaciones a los trainees de una sala
+     */
+    private function notifyRoomTrainees($room, $excercise)
+    {
+        try {
+            Log::info("Enviando notificaciones para ejercicio {$excercise->EXC_ID} en sala {$room->ROO_ID}");
+            
+            // Obtener todos los trainees de la sala
+            $usersRooms = \App\Models\UsersRoom::where('USR_ROO_ID', $room->ROO_ID)
+                                                ->with('user')
+                                                ->get();
+
+            Log::info("Trainees en la sala: " . $usersRooms->count());
+
+            if ($usersRooms->isEmpty()) {
+                Log::info("No hay trainees en la sala");
+                return;
+            }
+
+            $webPushService = new WebPushService();
+            $traineeIds = $usersRooms->pluck('user.USR_ID')->filter()->toArray();
+
+            Log::info("IDs de trainees: " . json_encode($traineeIds));
+
+            foreach ($traineeIds as $traineeId) {
+                Log::info("Enviando notificación a trainee ID: {$traineeId}");
+                
+                $result = $webPushService->sendToUser(
+                    $traineeId,
+                    '🏋️ Nuevo ejercicio asignado',
+                    "Tu entrenador ha añadido: {$excercise->EXC_Title}",
+                    [
+                        'type' => 'new_exercise',
+                        'exercise_id' => $excercise->EXC_ID,
+                        'room_id' => $room->ROO_ID,
+                        'room_name' => $room->ROO_Name
+                    ]
+                );
+                
+                Log::info("Resultado envío notificación: " . json_encode($result));
+            }
+
+        } catch (\Exception $e) {
+            Log::error('Error enviando notificaciones: ' . $e->getMessage());
+            Log::error($e->getTraceAsString());
         }
     }
 }
