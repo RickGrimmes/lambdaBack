@@ -10,6 +10,12 @@ use App\Http\Controllers\MediaController;
 use App\Http\Controllers\UsersRoomController;
 use App\Http\Controllers\NotificationController;
 
+Route::get('/version', function () {
+    return response()->json([
+        'version' => '1.0.0'
+    ]);
+});
+
 // USER (ENTRAN LOS 3 TIPOS DE USUARIO DE ALGUNA FORMA)
 Route::post('login', [UserController::class, 'login']);
 Route::post('register', [UserController::class, 'register']);
