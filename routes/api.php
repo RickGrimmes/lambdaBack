@@ -76,7 +76,7 @@ Route::middleware('auth:api')->group(function () {
     Route::get('getExcercisesByRoom/{room}', [ExcerciseController::class, 'getExcercisesByRoom']);
     Route::get('getExcercise/{excercise}', [ExcerciseController::class, 'getExcercise']); // ejercicio con media también
 
-    // NOTIFICATIONS
+    // NOTIFICATIONS2
     Route::post('notifications/subscribe', [NotificationController::class, 'subscribe']);
     Route::post('notifications/unsubscribe', [NotificationController::class, 'unsubscribe']);
     Route::get('notifications/my', [NotificationController::class, 'getMyNotifications']);
@@ -86,6 +86,11 @@ Route::middleware('auth:api')->group(function () {
     Route::delete('notifications/{notificationId}', [NotificationController::class, 'deleteNotification']);
     Route::post('notifications/test', [NotificationController::class, 'testNotification']); // Para pruebas
 
+    // NOTIFICATIONS
+    Route::middleware('jwt.auth')->group(function () {
+        Route::get('/notifications', [NotificationController::class, 'getMyNotifications']);
+        Route::put('/notifications/{id}', [NotificationController::class, 'markAsRead']);
+    });
     // ROUTINE
 
     #endregion

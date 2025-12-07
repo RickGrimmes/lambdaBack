@@ -2,46 +2,47 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Notification extends Model
 {
+    use HasFactory;
+
+    protected $table = 'notifications';
+    protected $primaryKey = 'NOT_ID';
+    
     protected $fillable = [
-        'user_id',
-        'type',
-        'title',
-        'body',
-        'data',
-        'read',
-        'read_at'
+        'NOT_USR_ID',
+        'NOT_Title',
+        'NOT_Body',
+        'NOT_ROO_ID',
+        'NOT_Status'
     ];
 
     protected $casts = [
-        'read' => 'boolean',
-        'read_at' => 'datetime'
+        'NOT_Status' => 'string',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime'
     ];
 
     public function user()
     {
-        return $this->belongsTo(User::class, 'user_id', 'USR_ID');
+        return $this->belongsTo(User::class, 'NOT_USR_ID', 'USR_ID');
     }
 
-    public function markAsRead()
+    public function room()
     {
-        $this->update([
-            'read' => true,
-            'read_at' => now()
-        ]);
+        return $this->belongsTo(Room::class, 'NOT_ROO_ID', 'ROO_ID');
     }
 
-    // Scopes para consultas
     public function scopeUnread($query)
     {
-        return $query->where('read', false);
+        return $query->where('NOT_Status', 'unread');
     }
 
     public function scopeForUser($query, $userId)
     {
-        return $query->where('user_id', $userId);
+        return $query->where('NOT_USR_ID', $userId);
     }
 }

@@ -398,8 +398,7 @@ class UserController extends Controller
             if ($validator->fails()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Error de validación',
-                    'errors' => $validator->errors()
+                    'message' => 'Los datos proporcionados no son válidos. Verifica la información e intenta nuevamente.'
                 ], 422);
             }
 

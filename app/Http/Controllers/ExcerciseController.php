@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Excercise;
+use App\Models\Notification;
 use App\Models\Room;
 use App\Models\User;
 use App\Services\FirebaseNotificationService;
@@ -18,7 +19,7 @@ use Illuminate\Support\Facades\Log;
 class ExcerciseController extends Controller
 {
 
-public function createExcercise(Request $request)
+    public function createExcercise(Request $request)
     {
         $validator = Validator::make($request->all(), [
             'EXC_Title' => 'required|string|max:255',
@@ -134,12 +135,16 @@ public function createExcercise(Request $request)
                 if ($trainees->count() > 0) {
                     $firebaseService = new FirebaseNotificationService();
                     
+                    // Datos de la notificación
+                    $notificationTitle = 'Nuevo Ejercicio Disponible';
+                    $notificationBody = 'La sala: ' . $room->ROO_Name . ' ha recibido un nuevo ejercicio. ¡Revisa la app para más detalles!';
+                    
                     foreach ($trainees as $trainee) {
                         try {
                             $result = $firebaseService->sendToDevice(
                                 $trainee->USR_FCM,
-                                'Nuevo Ejercicio Disponible',
-                                'La sala: ' . $room->ROO_Name . ' ha recibido un nuevo ejercicio. ¡Revisa la app para más detalles!',
+                                $notificationTitle,
+                                $notificationBody,
                                 [
                                     'type' => 'new_exercise',
                                     'exercise_id' => (string)$excercise->EXC_ID,
@@ -147,6 +152,19 @@ public function createExcercise(Request $request)
                                     'room_name' => $room->ROO_Name
                                 ]
                             );
+
+                            // GUARDAR NOTIFICACIÓN EN LA BASE DE DATOS (SIEMPRE)
+                            try {
+                                Notification::create([
+                                    'NOT_USR_ID' => $trainee->USR_ID,
+                                    'NOT_Title' => $notificationTitle,
+                                    'NOT_Body' => $notificationBody,
+                                    'NOT_ROO_ID' => $room->ROO_ID,
+                                    'NOT_Status' => 'unread'
+                                ]);
+                            } catch (\Exception $notificationDbError) {
+                                // Si falla el guardado en BD, no interrumpir el proceso y que le siga
+                            }
 
                             if (isset($result['success']) && $result['success']) {
                                 $notificationsSent++;
@@ -158,6 +176,18 @@ public function createExcercise(Request $request)
                             }
                             
                         } catch (\Exception $e) {
+                            try {
+                                Notification::create([
+                                    'NOT_USR_ID' => $trainee->USR_ID,
+                                    'NOT_Title' => $notificationTitle,
+                                    'NOT_Body' => $notificationBody,
+                                    'NOT_ROO_ID' => $room->ROO_ID,
+                                    'NOT_Status' => 'unread'
+                                ]);
+                            } catch (\Exception $notificationDbError) {
+                                // Silenciar error de BD para no interrumpir
+                            }
+
                             $notificationErrors[] = [
                                 'user' => $trainee->USR_Name,
                                 'error' => $e->getMessage()
@@ -191,7 +221,6 @@ public function createExcercise(Request $request)
             ], 500);
         }
     }
-
 
     public function getExcercisesByRoom($room)
     {
