@@ -8,19 +8,29 @@ use Kreait\Firebase\Messaging;
 
 class FirebaseServiceProvider extends ServiceProvider
 {
-    /**
-     * Register any application services.
-     */
-    public function register(): void
+    public function register()
     {
         $this->app->singleton('firebase.messaging', function ($app) {
-            $factory = (new Factory)->withServiceAccount(storage_path(env('FIREBASE_CREDENTIALS')));
-            return $factory->createMessaging();
+            try {
+                $credentialsPath = storage_path('app/' . env('FIREBASE_CREDENTIALS'));
+                
+                if (!file_exists($credentialsPath)) {
+                    throw new \Exception("Archivo de credenciales no encontrado en: " . $credentialsPath);
+                }
+
+                $factory = (new Factory)->withServiceAccount($credentialsPath);
+                $messaging = $factory->createMessaging();
+                
+                return $messaging;
+                
+            } catch (\Exception $e) {
+                throw $e;
+            }
         });
     }
 
-    public function provides()
+    public function boot()
     {
-        return ['firebase.messaging'];
+        //
     }
 }

@@ -4,15 +4,21 @@ namespace App\Http\Controllers;
 
 use App\Models\Excercise;
 use App\Models\Room;
+use App\Models\User;
+use App\Services\FirebaseNotificationService;
 use App\Services\WebPushService;
 use Illuminate\Http\Request;
 use Tymon\JWTAuth\Facades\JWTAuth;
 use Tymon\JWTAuth\Exceptions\JWTException;
 use Illuminate\Support\Facades\Validator;
 
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+
 class ExcerciseController extends Controller
 {
-    public function createExcercise(Request $request)
+
+public function createExcercise(Request $request)
     {
         $validator = Validator::make($request->all(), [
             'EXC_Title' => 'required|string|max:255',
@@ -87,6 +93,7 @@ class ExcerciseController extends Controller
                     
                     $path = $file->storeAs($exerciseFolder, $fileName, 'public');
                     $mediaPaths["EXC_Media{$i}"] = "/storage/" . $path;
+                    //$mediaPaths["EXC_Media{$i}"] = asset('storage/' . $path);
                     $uploadedFilesCount++;
                 }
             }
@@ -111,14 +118,70 @@ class ExcerciseController extends Controller
                 $excercise->refresh();
             }
 
-            // 🔔 Enviar notificaciones a los trainees de la sala
-            $this->notifyRoomTrainees($room, $excercise);
+            // CAMBIO HECHO PARA FCM, enviar notificación a trainees de la sala
+            $notificationsSent = 0;
+            $notificationErrors = [];
+
+            try {
+                // Obtener usuarios de la sala que tienen token FCM
+                $trainees = User::join('Users_Rooms', 'Users.USR_ID', '=', 'Users_Rooms.URO_USR_ID')
+                            ->where('Users_Rooms.URO_ROO_ID', $room->ROO_ID)
+                            ->where('Users.USR_UserRole', 'trainee')
+                            ->whereNotNull('Users.USR_FCM')
+                            ->select('Users.*')
+                            ->get();
+
+                if ($trainees->count() > 0) {
+                    $firebaseService = new FirebaseNotificationService();
+                    
+                    foreach ($trainees as $trainee) {
+                        try {
+                            $result = $firebaseService->sendToDevice(
+                                $trainee->USR_FCM,
+                                'Nuevo Ejercicio Disponible',
+                                'La sala: ' . $room->ROO_Name . ' ha recibido un nuevo ejercicio. ¡Revisa la app para más detalles!',
+                                [
+                                    'type' => 'new_exercise',
+                                    'exercise_id' => (string)$excercise->EXC_ID,
+                                    'room_id' => (string)$room->ROO_ID,
+                                    'room_name' => $room->ROO_Name
+                                ]
+                            );
+
+                            if (isset($result['success']) && $result['success']) {
+                                $notificationsSent++;
+                            } else {
+                                $notificationErrors[] = [
+                                    'user' => $trainee->USR_Name,
+                                    'error' => $result['error'] ?? 'Error desconocido'
+                                ];
+                            }
+                            
+                        } catch (\Exception $e) {
+                            $notificationErrors[] = [
+                                'user' => $trainee->USR_Name,
+                                'error' => $e->getMessage()
+                            ];
+                        }
+                    }
+                }
+                
+            } catch (\Exception $e) {
+                $notificationErrors[] = ['general' => $e->getMessage()];
+            }
 
             return response()->json([
                 'success' => true,
                 'message' => 'Ejercicio creado exitosamente',
-                'data' => $excercise
+                'data' => $excercise,
+                'fcm_notifications' => [
+                    'sent' => $notificationsSent,
+                    'errors' => count($notificationErrors),
+                    'trainees_found' => isset($trainees) ? $trainees->count() : 0,
+                    'error_details' => $notificationErrors
+                ]
             ], 201);
+
 
         } catch (\Exception $e) {
             return response()->json([
@@ -128,6 +191,7 @@ class ExcerciseController extends Controller
             ], 500);
         }
     }
+
 
     public function getExcercisesByRoom($room)
     {
@@ -229,7 +293,7 @@ class ExcerciseController extends Controller
                 ], 404);
             }
 
-            if ($user->USR_Type !== 'trainee') {
+            if ($user->USR_UserRole !== 'trainer') {
                 return response()->json([
                     'success' => false,
                     'message' => 'No tienes permisos para editar ejercicios'
@@ -346,7 +410,7 @@ class ExcerciseController extends Controller
                 ], 404);
             }
 
-            if ($user->USR_Type !== 'trainee') {
+            if ($user->USR_UserRole !== 'trainer') {
                 return response()->json([
                     'success' => false,
                     'message' => 'No tienes permisos para eliminar ejercicios'

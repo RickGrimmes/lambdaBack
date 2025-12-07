@@ -98,27 +98,13 @@ class UserController extends Controller
 
             $token = JWTAuth::fromUser($user);
 
-            $notificationSent = false;
+// Solo guardar el token FCM si se proporciona CAMBIO AQUI
+            $fcmRegistered = false;
             if ($request->has('fcm_token') && $request->fcm_token) {
                 $user->USR_FCM = $request->fcm_token;
                 $user->save();
-
-                // Enviar notificación de prueba
-                try {
-                    $firebaseService = new FirebaseNotificationService();
-                    $result = $firebaseService->sendToDevice(
-                        $request->fcm_token,
-                        'Hola title',
-                        'Hola body',
-                        ['type' => 'login_test']
-                    );
-                    $notificationSent = $result['success'];
-                } catch (\Exception $e) {
-                    // Si falla la notificación, no afectar el login
-                    $notificationSent = false;
-                }
+                $fcmRegistered = true;
             }
-
             return response()->json([
                 'success' => true,
                 'message' => 'Inicio de sesión exitoso',
