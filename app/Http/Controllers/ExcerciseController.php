@@ -468,19 +468,11 @@ class ExcerciseController extends Controller
             $excerciseModel->delete();
 
             $remainingExercises = Excercise::where('EXC_ROO_ID', $roomId)->count();
-            
-            if ($remainingExercises === 0) {
-                Room::find($roomId)->delete();
-                $roomDeleted = true;
-            } else {
-                $roomDeleted = false;
-            }
 
             return response()->json([
                 'success' => true,
                 'message' => 'Ejercicio eliminado exitosamente',
                 'deleted_exercise' => $exerciseTitle,
-                'room_deleted' => $roomDeleted,
                 'remaining_exercises_in_room' => $remainingExercises
             ], 200);
 
