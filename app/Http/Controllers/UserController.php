@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use Tymon\JWTAuth\Facades\JWTAuth;
 use Tymon\JWTAuth\Exceptions\JWTException;
-
+use ReCaptcha\ReCaptcha;
 use App\Services\FirebaseNotificationService;
 
 class UserController extends Controller
@@ -22,7 +22,8 @@ class UserController extends Controller
             'USR_Email' => 'required|email|unique:Users,USR_Email|max:255',
             'USR_Phone' => 'required|unique:Users,USR_Phone|max:10',
             'USR_Password' => 'required|string|min:8|max:255',
-            'USR_UserRole' => 'required|in:trainer,trainee'
+            'USR_UserRole' => 'required|in:trainer,trainee',
+            'recaptcha_token' => 'required|string'
         ]);
 
         if ($validator->fails()) {
@@ -33,6 +34,17 @@ class UserController extends Controller
             ], 422);
         }
 
+        // el recaptcha
+        $recaptcha = new ReCaptcha(env('RECAPTCHA_SECRET_KEY'));
+        $response = $recaptcha->verify($request->recaptcha_token, $request->ip());
+        
+        if (!$response->isSuccess()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Verificación de seguridad fallida. Inténtalo de nuevo.'
+            ], 422);
+        }
+        
         if ($request->USR_UserRole === 'admin') {
             return response()->json([
                 'success' => false,
