@@ -12,7 +12,7 @@ use App\Http\Controllers\NotificationController;
 
 Route::get('/version', function () {
     return response()->json([
-        'version' => '1.1.2'
+        'version' => '1.2.2'
     ]);
 });
 
@@ -92,13 +92,15 @@ Route::middleware('auth:api')->group(function () {
     Route::delete('notifications/{notificationId}', [NotificationController::class, 'deleteNotification']);
     Route::post('notifications/test', [NotificationController::class, 'testNotification']); // Para pruebas
 
+    // ROUTINE
+
     // NOTIFICATIONS
     Route::middleware('jwt.auth')->group(function () {
         Route::get('/notifications', [NotificationController::class, 'getMyNotifications']);
         Route::put('/notifications/{id}', [NotificationController::class, 'markAsRead']);
     });
-    // ROUTINE
 
     #endregion
 
+    Route::post('toggle2FA', [UserController::class, 'toggle2FA']);
 });

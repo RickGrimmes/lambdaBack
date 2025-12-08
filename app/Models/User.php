@@ -29,6 +29,9 @@ class User extends Authenticatable implements JWTSubject
         'USR_FCM',
         'USR_Password',
         'USR_UserRole',
+        'USR_2FA_Code',
+        'USR_2FA_Expires',
+        'USR_2FA_Enabled',
     ];
 
     /**

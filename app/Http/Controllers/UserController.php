@@ -5,12 +5,11 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use Tymon\JWTAuth\Facades\JWTAuth;
 use Tymon\JWTAuth\Exceptions\JWTException;
 use ReCaptcha\ReCaptcha;
-use App\Services\FirebaseNotificationService;
+use Illuminate\Support\Facades\Mail;
 
 class UserController extends Controller
 {
@@ -82,12 +81,14 @@ class UserController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'USR_Email' => 'required|email',
-            'USR_Password' => 'required|string|min:8'
+            'USR_Password' => 'required|string|min:8',
+            'USR_2FA_Code' => 'nullable|string|size:6',
         ], [
             'USR_Email.required' => 'El campo email es obligatorio.',
             'USR_Email.email' => 'El campo email debe ser una dirección de correo electrónico válida.',
             'USR_Password.required' => 'El campo contraseña es obligatorio.',
-            'USR_Password.min' => 'La contraseña debe tener al menos 8 caracteres.'
+            'USR_Password.min' => 'La contraseña debe tener al menos 8 caracteres.',
+            'USR_2FA_Code.size' => 'El código debe tener exactamente 6 caracteres.'
         ]);
 
         if ($validator->fails()) {
@@ -108,26 +109,126 @@ class UserController extends Controller
                 ], 401);
             }
 
+            if (!$user->USR_2FA_Enabled) {
+                $token = JWTAuth::fromUser($user);
+
+                if ($request->has('fcm_token') && $request->fcm_token) {
+                    $user->USR_FCM = $request->fcm_token;
+                    $user->save();
+                }
+                
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Inicio de sesión exitoso',
+                    'data' => $user,
+                    'token' => $token,
+                ], 200);
+            }
+
+            if (!$request->has('USR_2FA_Code') || empty($request->USR_2FA_Code)) {
+            $code = str_pad(random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
+            
+            $user->update([
+                'USR_2FA_Code' => $code,
+                'USR_2FA_Expires' => now()->addMinutes(5)
+            ]);
+
+            // Enviar email
+            try {
+                    Mail::raw("Tu código de verificación es: {$code}\n\n⏰ Expira en 5 minutos.\n\nSi no solicitaste este código, ignora este mensaje.", 
+                    function($message) use ($user) {
+                        $message->to($user->USR_Email)
+                            ->subject('Código de verificación - Lambda App');
+                    });
+                } catch (\Exception $e) {
+                    // na
+                }
+
+                return response()->json([
+                    'success' => false, 
+                    'message' => 'Código de verificación enviado a tu email',
+                    'requires_2fa' => true,
+                    'email_sent' => true
+                ], 200); 
+            }
+
+            if (!$user->USR_2FA_Code || 
+                $user->USR_2FA_Code !== $request->USR_2FA_Code || 
+                now()->isAfter($user->USR_2FA_Expires)) {
+                
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Código inválido o expirado. Intenta nuevamente.',
+                    'requires_2fa' => true
+                ], 401);
+            }
+
+            $user->update([
+                'USR_2FA_Code' => null,
+                'USR_2FA_Expires' => null
+            ]);
+
             $token = JWTAuth::fromUser($user);
 
-// Solo guardar el token FCM si se proporciona CAMBIO AQUI
-            $fcmRegistered = false;
             if ($request->has('fcm_token') && $request->fcm_token) {
                 $user->USR_FCM = $request->fcm_token;
                 $user->save();
-                $fcmRegistered = true;
             }
+
             return response()->json([
                 'success' => true,
-                'message' => 'Inicio de sesión exitoso',
+                'message' => 'Inicio de sesión exitoso con 2FA',
                 'data' => $user,
                 'token' => $token,
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al intentar iniciar sesión',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function toggle2FA(Request $request)
+    {
+        try {
+            $user = JWTAuth::parseToken()->authenticate();
+
+            if (!$user) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Usuario no encontrado'
+                ], 404);
+            }
+
+            // Obtener el estado actual ANTES del toggle
+            $currentState = (bool)$user->USR_2FA_Enabled;
+            $newState = !$currentState;
+
+            $user->update([
+                'USR_2FA_Enabled' => $newState,
+                'USR_2FA_Code' => null,
+                'USR_2FA_Expires' => null
+            ]);
+
+            // Refrescar el modelo para obtener el valor actualizado
+            $user->refresh();
+
+            return response()->json([
+                'success' => true,
+                'message' => $newState ? 
+                            'Autenticación 2FA habilitada' : 
+                            'Autenticación 2FA deshabilitada',
+                'is_2fa_enabled' => (bool)$user->USR_2FA_Enabled, // Cast a boolean
+                'previous_state' => $currentState, // Para debug
+                'new_state' => $newState // Para debug
             ], 200);
 
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Error al intentar iniciar sesión',
+                'message' => 'Error al cambiar configuración 2FA',
                 'error' => $e->getMessage()
             ], 500);
         }
