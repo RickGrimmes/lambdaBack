@@ -136,14 +136,17 @@ class UserController extends Controller
             // Enviar email con código
             $emailSent = false;
             try {
-                Mail::raw("🔐 Tu código de verificación es: {$code}\n\n⏰ Expira en 5 minutos.\n\nSi no solicitaste este código, ignora este mensaje.", 
-                function($message) use ($user) {
-                    $message->to($user->USR_Email)
-                            ->subject('Código de verificación - Lambda App');
-                });
+                $resend = \Resend::client(env('RESEND_API_KEY'));
+                
+                $result = $resend->emails->send([
+                    'from' => 'Lambda App <onboarding@resend.dev>',
+                    'to' => [$user->USR_Email],
+                    'subject' => '🔐 Código de verificación - Lambda App',
+                    'text' => "Tu código de verificación es: {$code}\n\nExpira en 5 minutos.\n\nSi no solicitaste este código, ignora este mensaje."
+                ]);
+                
                 $emailSent = true;
             } catch (\Exception $e) {
-                // Si falla el email, continuar pero informar
                 $emailSent = false;
             }
 
