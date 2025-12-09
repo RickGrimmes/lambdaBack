@@ -18,6 +18,7 @@ Route::get('/version', function () {
 
 // USER (ENTRAN LOS 3 TIPOS DE USUARIO DE ALGUNA FORMA)
 Route::post('login', [UserController::class, 'login']);
+Route::post('verify2FA', [UserController::class, 'verify2FA']);
 Route::post('register', [UserController::class, 'register']);
 
 // Obtener clave pública VAPID (sin autenticación)
