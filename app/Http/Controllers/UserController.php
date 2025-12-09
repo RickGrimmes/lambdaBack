@@ -139,7 +139,7 @@ class UserController extends Controller
                 $resend = \Resend::client(env('RESEND_API_KEY'));
                 
                 $result = $resend->emails->send([
-                    'from' => 'Lambda App <onboarding@resend.dev>',
+                    'from' => 'Lambda App <noreply@safekids.site>',
                     'to' => [$user->USR_Email],
                     'subject' => '🔐 Código de verificación - Lambda App',
                     'text' => "Tu código de verificación es: {$code}\n\nExpira en 5 minutos.\n\nSi no solicitaste este código, ignora este mensaje."
