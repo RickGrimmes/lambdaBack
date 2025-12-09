@@ -20,9 +20,12 @@ class UserController extends Controller
             'USR_LastName' => 'required|string|min:2|max:50',
             'USR_Email' => 'required|email|unique:Users,USR_Email|max:255',
             'USR_Phone' => 'required|unique:Users,USR_Phone|max:10',
-            'USR_Password' => 'required|string|min:8|max:255',
+            'USR_Password' => 'required|string|min:8|max:255|regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/',
             'USR_UserRole' => 'required|in:trainer,trainee',
             'recaptcha_token' => 'required|string'
+        ], [
+            'USR_Password.regex' => 'La contraseña debe contener al menos: 1 letra minúscula, 1 mayúscula y 1 número.',
+            'USR_Password.min' => 'La contraseña debe tener al menos 8 caracteres.'
         ]);
 
         if ($validator->fails()) {
@@ -260,7 +263,10 @@ class UserController extends Controller
             'USR_LastName' => 'sometimes|required|string|min:2|max:50',
             'USR_Email' => 'sometimes|required|email|max:255',
             'USR_Phone' => 'sometimes|required|max:10',
-            'USR_Password' => 'sometimes|required|string|min:8|max:255',
+            'USR_Password' => 'sometimes|required|string|min:8|max:255|regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/',
+        ], [
+            'USR_Password.regex' => 'La contraseña debe contener al menos: 1 letra minúscula, 1 mayúscula y 1 número.',
+            'USR_Password.min' => 'La contraseña debe tener al menos 8 caracteres.'
         ]);
 
         if ($validator->fails()) {
@@ -368,8 +374,11 @@ class UserController extends Controller
                 'USR_LastName' => 'sometimes|required|string|min:2|max:50',
                 'USR_Email' => 'sometimes|required|email|max:255',
                 'USR_Phone' => 'sometimes|required|max:10',
-                'USR_Password' => 'sometimes|required|string|min:8|max:255',
+                'USR_Password' => 'sometimes|required|string|min:8|max:255|regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/',
                 'USR_UserRole' => 'sometimes|required|in:trainer,trainee,admin'
+            ], [
+                'USR_Password.regex' => 'La contraseña debe contener al menos: 1 letra minúscula, 1 mayúscula y 1 número.',
+                'USR_Password.min' => 'La contraseña debe tener al menos 8 caracteres.'
             ]);
 
             if ($validator->fails()) {
@@ -503,9 +512,12 @@ class UserController extends Controller
                 'USR_LastName' => 'required|string|min:2|max:50',
                 'USR_Email' => 'required|email|unique:Users,USR_Email|max:255',
                 'USR_Phone' => 'required|unique:Users,USR_Phone|max:10',
-                'USR_Password' => 'required|string|min:8|max:255',
+                'USR_Password' => 'required|string|min:8|max:255|regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/',
                 'USR_UserRole' => 'required|in:trainer,trainee',
                 'USR_FCM' => 'nullable|string'
+            ], [
+                'USR_Password.regex' => 'La contraseña debe contener al menos: 1 letra minúscula, 1 mayúscula y 1 número.',
+                'USR_Password.min' => 'La contraseña debe tener al menos 8 caracteres.'
             ]);
 
             if ($validator->fails()) {

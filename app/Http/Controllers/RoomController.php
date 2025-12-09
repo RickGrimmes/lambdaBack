@@ -13,9 +13,6 @@ use Tymon\JWTAuth\Exceptions\JWTException;
 
 class RoomController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
     public function getMyRoomsData()
     {
         try {
@@ -136,9 +133,6 @@ class RoomController extends Controller
         }
     }
 
-    /**
-     * Generate unique room code (7 characters alphanumeric)
-     */
     private function generateUniqueRoomCode()
     {
         do {
