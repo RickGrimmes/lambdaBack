@@ -12,7 +12,7 @@ use App\Http\Controllers\NotificationController;
 
 Route::get('/version', function () {
     return response()->json([
-        'version' => '1.3.5'
+        'version' => '1.3.6'
     ]);
 });
 

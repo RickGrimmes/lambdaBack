@@ -297,7 +297,7 @@ class UserController extends Controller
 
             // Limpiar el token FCM del usuario para que no reciba más notificaciones
             if ($user) {
-                $user->update(['USR_FCM' => null]);
+                $user->update(['USR_FCM' => ' ']);
             }
 
             JWTAuth::invalidate(JWTAuth::getToken());
