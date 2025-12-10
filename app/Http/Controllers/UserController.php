@@ -293,6 +293,13 @@ class UserController extends Controller
     public function logout(Request $request)
     {
         try {
+            $user = JWTAuth::parseToken()->authenticate();
+
+            // Limpiar el token FCM del usuario para que no reciba más notificaciones
+            if ($user) {
+                $user->update(['USR_FCM' => null]);
+            }
+
             JWTAuth::invalidate(JWTAuth::getToken());
 
             return response()->json([

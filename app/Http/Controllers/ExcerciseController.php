@@ -124,11 +124,13 @@ class ExcerciseController extends Controller
             $notificationErrors = [];
 
             try {
-                // Obtener usuarios de la sala que tienen token FCM
+                // Obtener usuarios de la sala que tienen token FCM válido (no nulo y no vacío)
                 $trainees = User::join('Users_Rooms', 'Users.USR_ID', '=', 'Users_Rooms.URO_USR_ID')
                             ->where('Users_Rooms.URO_ROO_ID', $room->ROO_ID)
                             ->where('Users.USR_UserRole', 'trainee')
                             ->whereNotNull('Users.USR_FCM')
+                            ->where('Users.USR_FCM', '!=', '')
+                            ->where('Users.USR_FCM', '!=', 'token_hardcodeado_temporal')
                             ->select('Users.*')
                             ->get();
 
